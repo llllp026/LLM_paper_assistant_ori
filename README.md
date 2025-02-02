@@ -12,7 +12,9 @@ As a cost estimate, running this on all of `cs.CL` cost $0.07 on 2/7/2024(on GPT
 - **2/15/2024**: fixed a bug with author parsing in the RSS format + cost estimates for title filtering being off + crash when 0 papers are on the feed. 
 - **2/7/2024**: fixed a critical issue from ArXiv changing their RSS format. Added and enabled a title filtering to reduce costs.
 - **1/6/2025**: fixed arxiv api. Changing api from gpt4 to deepseek v3.
+- **2/2/2025**: fixed artifact@v3 bug. Changing v3 to v4.
 
+  
 ## Quickstart
 This is the minimal necessary steps to get the scanner to run. It is highly recommended to read the whole thing to decide what you want to run.
 
