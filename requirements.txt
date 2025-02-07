@@ -1,4 +1,4 @@
-openai==0.28
+openai~=0.28
 Levenshtein
 requests~=2.31.0
 tqdm~=4.66.1
