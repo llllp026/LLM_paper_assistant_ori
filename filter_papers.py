@@ -66,13 +66,42 @@ def calc_price(model, usage):
 
 
 @retry.retry(tries=3, delay=2)
+# def call_chatgpt(full_prompt, openai_client, model):
+#     return openai_client.chat.completions.create(
+#         model=model,
+#         messages=[{"role": "user", "content": full_prompt}],
+#         temperature=0,
+#         seed=0
+#     )
 def call_chatgpt(full_prompt, openai_client, model):
-    return openai_client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": full_prompt}],
-        temperature=0,
-        seed=0
-    )
+    try:
+        print(f"Sending request with model: {model}")  # 调试：打印请求的模型信息
+        response = openai_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": full_prompt}],
+            temperature=0,
+            seed=0
+        )
+
+        # 调试：打印响应状态码和响应内容
+        print(f"Response Status: {response.status_code}")
+        print(f"Response Content: {response.text}")
+
+        # 检查响应是否有效
+        if response.status_code == 200:
+            try:
+                response_json = response.json()
+                return response_json
+            except ValueError:
+                print("Failed to decode JSON response")
+                return None
+        else:
+            print(f"API error: {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"Request failed: {e}")
+        return None
 
 
 def run_and_parse_chatgpt(full_prompt, openai_client, config):
