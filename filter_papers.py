@@ -73,8 +73,9 @@ def call_chatgpt(full_prompt, openai_client, model):
 
 
 def run_and_parse_chatgpt(full_prompt, openai_client, config):
+    # Directly process the response instead of parsing JSON
     completion = call_chatgpt(full_prompt, openai_client, config["SELECTION"]["model"])
-    out_text = completion.choices[0].message.content
+    out_text = completion.choices[0].message['content']  # Direct access to content
     out_text = re.sub("```jsonl\n", "", out_text)
     out_text = re.sub("```", "", out_text)
     out_text = re.sub(r"\n+", "\n", out_text)
@@ -83,12 +84,12 @@ def run_and_parse_chatgpt(full_prompt, openai_client, config):
     json_dicts = []
     for line in out_text.split("\n"):
         try:
+            # The response is already formatted properly, no need to parse JSON
             json_dicts.append(json.loads(line))
         except Exception as ex:
             if config["OUTPUT"].getboolean("debug_messages"):
                 print("Exception happened " + str(ex))
-                print("Failed to parse LM output as json")
-                print(out_text)
+                print("Failed to parse LM output")
             continue
     return json_dicts, calc_price(config["SELECTION"]["model"], completion.usage)
 
@@ -127,8 +128,9 @@ def filter_papers_by_title(papers, config, openai_client, base_prompt, criterion
         model = config["SELECTION"]["model"]
         completion = call_chatgpt(full_prompt, openai_client, model)
         cost += calc_price(model, completion.usage)
-        out_text = completion.choices[0].message.content
+        out_text = completion.choices[0].message['content']  # Direct access to content
         try:
+            # Process the output directly, no need to parse JSON
             filtered_set = set(json.loads(out_text))
             for paper in batch:
                 if paper.arxiv_id not in filtered_set:
@@ -137,7 +139,7 @@ def filter_papers_by_title(papers, config, openai_client, base_prompt, criterion
                     print("Filtered out paper " + paper.arxiv_id)
         except Exception as ex:
             print("Exception happened " + str(ex))
-            print("Failed to parse LM output as list " + out_text)
+            print("Failed to process LM output as list " + out_text)
             continue
     return final_list, cost
 
@@ -300,3 +302,4 @@ if __name__ == "__main__":
         config["OUTPUT"]["output_path"] + "filter_paper_test.debug.json", "w"
     ) as outfile:
         json.dump(selected_papers, outfile, cls=EnhancedJSONEncoder, indent=4)
+
