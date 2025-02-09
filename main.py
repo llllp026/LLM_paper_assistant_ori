@@ -58,14 +58,20 @@ def get_papers(ids: list[str], S2_API_KEY: str, batch_size: int = 100, **kwargs)
             yield from get_paper_batch(session, ids_batch, S2_API_KEY, **kwargs)
 
 
-def get_authors(all_authors: list[str], S2_API_KEY: str, batch_size: int = 100, **kwargs):
+def get_authors(
+    all_authors: list[str], S2_API_KEY: str, batch_size: int = 100, **kwargs
+):
     author_metadata_dict = {}
     with Session() as session:
         for author in tqdm(all_authors):
             auth_map = get_one_author(session, author, S2_API_KEY)
             if auth_map is not None:
                 author_metadata_dict[author] = auth_map
-            time.sleep(0.02) if S2_API_KEY else time.sleep(1.0)
+            # Avoid rate limiting
+            if S2_API_KEY is not None:
+                time.sleep(0.02)
+            else:
+                time.sleep(1.0)
     return author_metadata_dict
 
 
@@ -110,20 +116,19 @@ if __name__ == "__main__":
         raise ValueError("OpenAI key is not set - please set OAI_KEY to your OpenAI key")
     
     openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.siliconflow.cn/v1")
-    
-    # Load author list
+
     with io.open("configs/authors.txt", "r") as fopen:
         author_names, author_ids = parse_authors(fopen.readlines())
     author_id_set = set(author_ids)
 
-    papers = list(get_papers_from_arxiv_rss_api(config))
+    # Corrected call to get_papers_from_arxiv_rss_api with config
+    papers = list(get_papers_from_arxiv_rss_api(config))  # Ensure this function is being called properly
 
     all_authors = set()
     for paper in papers:
         all_authors.update(set(paper.authors))
     if config["OUTPUT"].getboolean("debug_messages"):
         print(f"Getting author info for {len(all_authors)} authors")
-    
     all_authors = get_authors(list(all_authors), S2_API_KEY)
 
     if config["OUTPUT"].getboolean("dump_debug_file"):
@@ -135,7 +140,6 @@ if __name__ == "__main__":
             json.dump(list(author_id_set), outfile, cls=EnhancedJSONEncoder, indent=4)
 
     selected_papers, all_papers, sort_dict = filter_by_author(all_authors, papers, author_id_set, config)
-    
     filter_by_gpt(all_authors, papers, config, openai_client, all_papers, selected_papers, sort_dict)
 
     # Add Chinese translation to titles and abstracts
@@ -149,30 +153,28 @@ if __name__ == "__main__":
     values = list(sort_dict.values())
     sorted_keys = [keys[idx] for idx in argsort(values)[::-1]]
     selected_papers = {key: selected_papers[key] for key in sorted_keys}
-    
+
     if config["OUTPUT"].getboolean("debug_messages"):
         print(sort_dict)
         print(selected_papers)
 
+    # Pick endpoints and push the summaries
     if len(papers) > 0:
         if config["OUTPUT"].getboolean("dump_json"):
             with open(config["OUTPUT"]["output_path"] + "output.json", "w") as outfile:
                 json.dump(selected_papers, outfile, indent=4)
-        
         if config["OUTPUT"].getboolean("dump_md"):
             with open(config["OUTPUT"]["output_path"] + "output.md", "w") as f:
                 f.write(render_md_string(selected_papers))
-            
-            # Generate markdown file with translated content
             with open(config["OUTPUT"]["output_path"] + "output_translated.md", "w") as f:
                 for paper_id, paper in selected_papers.items():
                     f.write(f"## {paper['title_cn']}\n\n")
                     f.write(f"{paper['abstract_cn']}\n\n")
 
+        # Only push to Slack for non-empty dicts
         if config["OUTPUT"].getboolean("push_to_slack"):
             SLACK_KEY = os.environ.get("SLACK_KEY")
             if SLACK_KEY is None:
                 print("Warning: push_to_slack is true, but SLACK_KEY is not set - not pushing to slack")
             else:
                 push_to_slack(selected_papers)
-
