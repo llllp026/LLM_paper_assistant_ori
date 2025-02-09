@@ -247,7 +247,7 @@ if __name__ == "__main__":
             "OpenAI key is not set - please set OAI_KEY to your OpenAI key"
         )
         
-    client = OpenAI(api_key=OAI_KEY, base_url="https://api.deepseek.com")
+    client = OpenAI(api_key=OAI_KEY, base_url="https://api.siliconflow.cn/v1")
     
     response = client.chat.completions.create(
         model="deepseek-chat",
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     keyconfig = configparser.ConfigParser()
     keyconfig.read("configs/keys.ini")
     #S2_API_KEY = keyconfig["KEYS"]["semanticscholar"]
-    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.deepseek.com")
+    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.siliconflow.cn/v1")
     #openai_client = openai
     # deal with config parsing
     with open("configs/base_prompt.txt", "r") as f:
