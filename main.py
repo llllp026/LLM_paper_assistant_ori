@@ -188,7 +188,7 @@ def translate_to_chinese_via_deepseek(text: str, client: OpenAI) -> str:
     try:
         # 使用 DeepSeek API 的 chat.completions.create 方法
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-ai/DeepSeek-V2.5",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that translates English text to Chinese."},
                 {"role": "user", "content": f"Translate the following text to Chinese:\n\n{text}"},
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         raise ValueError(
             "OpenAI key is not set - please set OAI_KEY to your OpenAI key"
         )
-    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.deepseek.com")
+    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.siliconflow.cn/v1")
     #openai_client = openai
     # load the author list
     with io.open("configs/authors.txt", "r") as fopen:
