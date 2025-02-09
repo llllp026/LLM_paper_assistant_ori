@@ -4,7 +4,6 @@ import os
 import time
 
 from openai import OpenAI
-import openai
 from requests import Session
 from typing import TypeVar, Generator
 import io
@@ -40,15 +39,8 @@ def get_paper_batch(
         "fields": fields,
         **kwargs,
     }
-    if S2_API_KEY is None:
-        headers = {}
-    else:
-        headers = {
-            "X-API-KEY": S2_API_KEY,
-        }
-    body = {
-        "ids": ids,
-    }
+    headers = {"X-API-KEY": S2_API_KEY} if S2_API_KEY else {}
+    body = {"ids": ids}
 
     with session.post(
         "https://api.semanticscholar.org/graph/v1/paper/batch",
@@ -60,13 +52,39 @@ def get_paper_batch(
         return response.json()
 
 
+def get_papers(ids: list[str], S2_API_KEY: str, batch_size: int = 100, **kwargs) -> Generator[dict, None, None]:
+    with Session() as session:
+        for ids_batch in batched(ids, batch_size=batch_size):
+            yield from get_paper_batch(session, ids_batch, S2_API_KEY, **kwargs)
+
+
+def get_authors(all_authors: list[str], S2_API_KEY: str, batch_size: int = 100, **kwargs):
+    author_metadata_dict = {}
+    with Session() as session:
+        for author in tqdm(all_authors):
+            auth_map = get_one_author(session, author, S2_API_KEY)
+            if auth_map is not None:
+                author_metadata_dict[author] = auth_map
+            time.sleep(0.02) if S2_API_KEY else time.sleep(1.0)
+    return author_metadata_dict
+
+
+def parse_authors(lines):
+    author_ids = []
+    authors = []
+    for line in lines:
+        if line.startswith("#") or not line.strip():
+            continue
+        author_split = line.split(",")
+        author_ids.append(author_split[1].strip())
+        authors.append(author_split[0].strip())
+    return authors, author_ids
+
+
 def translate_to_chinese_via_deepseek(text: str, client: OpenAI) -> str:
-    """
-    使用 DeepSeek API 将英文文本翻译成中文
-    """
     try:
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-ai/DeepSeek-V2.5",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that translates English text to Chinese."},
                 {"role": "user", "content": f"Translate the following text to Chinese:\n\n{text}"},
@@ -78,7 +96,7 @@ def translate_to_chinese_via_deepseek(text: str, client: OpenAI) -> str:
         translated_text = response.choices[0].message['content'].strip()
         return translated_text
     except Exception as e:
-        print(f"翻译失败: {e}")
+        print(f"Translation failed: {e}")
         return text
 
 
@@ -87,13 +105,13 @@ if __name__ == "__main__":
     config.read("configs/config.ini")
 
     S2_API_KEY = os.environ.get("S2_KEY")
-    OAI_KEY = os.environ.get("OAI_KEY")
+    OAI_KEY = os.environ.get("OAI_KEY2")
     if OAI_KEY is None:
-        raise ValueError(
-            "OpenAI key is not set - please set OAI_KEY to your OpenAI key"
-        )
-    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.deepseek.com")
-
+        raise ValueError("OpenAI key is not set - please set OAI_KEY to your OpenAI key")
+    
+    openai_client = OpenAI(api_key=OAI_KEY, base_url="https://api.siliconflow.cn/v1")
+    
+    # Load author list
     with io.open("configs/authors.txt", "r") as fopen:
         author_names, author_ids = parse_authors(fopen.readlines())
     author_id_set = set(author_ids)
@@ -104,61 +122,48 @@ if __name__ == "__main__":
     for paper in papers:
         all_authors.update(set(paper.authors))
     if config["OUTPUT"].getboolean("debug_messages"):
-        print("Getting author info for " + str(len(all_authors)) + " authors")
+        print(f"Getting author info for {len(all_authors)} authors")
+    
     all_authors = get_authors(list(all_authors), S2_API_KEY)
 
     if config["OUTPUT"].getboolean("dump_debug_file"):
-        with open(
-            config["OUTPUT"]["output_path"] + "papers.debug.json", "w"
-        ) as outfile:
+        with open(config["OUTPUT"]["output_path"] + "papers.debug.json", "w") as outfile:
             json.dump(papers, outfile, cls=EnhancedJSONEncoder, indent=4)
-        with open(
-            config["OUTPUT"]["output_path"] + "all_authors.debug.json", "w"
-        ) as outfile:
+        with open(config["OUTPUT"]["output_path"] + "all_authors.debug.json", "w") as outfile:
             json.dump(all_authors, outfile, cls=EnhancedJSONEncoder, indent=4)
-        with open(
-            config["OUTPUT"]["output_path"] + "author_id_set.debug.json", "w"
-        ) as outfile:
+        with open(config["OUTPUT"]["output_path"] + "author_id_set.debug.json", "w") as outfile:
             json.dump(list(author_id_set), outfile, cls=EnhancedJSONEncoder, indent=4)
 
-    selected_papers, all_papers, sort_dict = filter_by_author(
-        all_authors, papers, author_id_set, config
-    )
-    filter_by_gpt(
-        all_authors,
-        papers,
-        config,
-        openai_client,
-        all_papers,
-        selected_papers,
-        sort_dict,
-    )
+    selected_papers, all_papers, sort_dict = filter_by_author(all_authors, papers, author_id_set, config)
+    
+    filter_by_gpt(all_authors, papers, config, openai_client, all_papers, selected_papers, sort_dict)
 
-    # 增加翻译成中文的模块
+    # Add Chinese translation to titles and abstracts
     for paper_id, paper in selected_papers.items():
         print(f"Translating paper: {paper['title']}")
         paper['title_cn'] = translate_to_chinese_via_deepseek(paper['title'], openai_client)
         paper['abstract_cn'] = translate_to_chinese_via_deepseek(paper['abstract'], openai_client)
-    
-    # 排序论文
+
+    # Sort papers by relevance and novelty
     keys = list(sort_dict.keys())
     values = list(sort_dict.values())
     sorted_keys = [keys[idx] for idx in argsort(values)[::-1]]
     selected_papers = {key: selected_papers[key] for key in sorted_keys}
+    
     if config["OUTPUT"].getboolean("debug_messages"):
         print(sort_dict)
         print(selected_papers)
 
-    # 推送到 Slack
     if len(papers) > 0:
         if config["OUTPUT"].getboolean("dump_json"):
             with open(config["OUTPUT"]["output_path"] + "output.json", "w") as outfile:
                 json.dump(selected_papers, outfile, indent=4)
+        
         if config["OUTPUT"].getboolean("dump_md"):
             with open(config["OUTPUT"]["output_path"] + "output.md", "w") as f:
                 f.write(render_md_string(selected_papers))
-
-            # 生成包含中文翻译的 Markdown 文件
+            
+            # Generate markdown file with translated content
             with open(config["OUTPUT"]["output_path"] + "output_translated.md", "w") as f:
                 for paper_id, paper in selected_papers.items():
                     f.write(f"## {paper['title_cn']}\n\n")
@@ -167,8 +172,7 @@ if __name__ == "__main__":
         if config["OUTPUT"].getboolean("push_to_slack"):
             SLACK_KEY = os.environ.get("SLACK_KEY")
             if SLACK_KEY is None:
-                print(
-                    "Warning: push_to_slack is true, but SLACK_KEY is not set - not pushing to slack"
-                )
+                print("Warning: push_to_slack is true, but SLACK_KEY is not set - not pushing to slack")
             else:
                 push_to_slack(selected_papers)
+
