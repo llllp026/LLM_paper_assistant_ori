@@ -1,4 +1,4 @@
-name: Publish output MD to github pages
+name: Publish output MD to GitHub Pages
 
 on:
   workflow_dispatch:
@@ -6,7 +6,6 @@ on:
     workflows: ["Run daily arxiv"]
     types:
       - completed
-
 
 permissions: write-all
 
@@ -17,9 +16,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     outputs:
-      file-exists: ${{steps.file-check.outputs.file_exists}}
+      file-exists: ${{ steps.check_files.outputs.files_exists }}
     steps:
     - uses: actions/checkout@v4
+
     - name: Download artifact
       id: download-artifact
       uses: dawidd6/action-download-artifact@v2
@@ -27,23 +27,77 @@ jobs:
         workflow: cron_runs.yaml
         workflow_conclusion: success
         name: arxiv-scanner-outputs
+
     - name: Display structure of downloaded files
       run: ls -R
-    - name: Check for output.md
+
+    - name: Check for output.md and output_translated.md
       id: check_files
       uses: andstor/file-existence-action@v2
       with:
-        files: output.md
-    - name: Convert output.md to pages
+        files: output.md,output_translated.md
+
+    # Ensure the output directories exist for both English and Chinese versions
+    - name: Ensure dist directories exist
+      run: |
+        mkdir -p dist/en
+        mkdir -p dist/zh
+
+    # Convert the English version of output.md to pages
+    - name: Convert English version to pages
       uses: wranders/markdown-to-pages-action@v0.1
       if: steps.check_files.outputs.files_exists == 'true'
       with:
-       token: ${{ secrets.GITHUB_TOKEN }}
-       file: output.md
-    - uses: actions/upload-pages-artifact@v3
+        token: ${{ secrets.GITHUB_TOKEN }}
+        file: output.md
+        out-path: dist/en
+        out-path-not-empty: true
+
+    # Convert the Chinese version of output_translated.md to pages
+    - name: Convert Chinese version to pages
+      uses: wranders/markdown-to-pages-action@v0.1
+      if: steps.check_files.outputs.files_exists == 'true'
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        file: output_translated.md
+        out-path: dist/zh
+        out-path-not-empty: true
+
+    # Generate the navigation index page
+    - name: Generate navigation index
+      run: |
+        echo "<!DOCTYPE html>" > dist/index.html
+        echo "<html lang=\"en\">" >> dist/index.html
+        echo "<head>" >> dist/index.html
+        echo "    <meta charset=\"UTF-8\">" >> dist/index.html
+        echo "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">" >> dist/index.html
+        echo "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" >> dist/index.html
+        echo "    <title>GPT Paper Assistant</title>" >> dist/index.html
+        echo "</head>" >> dist/index.html
+        echo "<body>" >> dist/index.html
+        echo "    <h1>GPT Paper Assistant</h1>" >> dist/index.html
+        echo "    <p>Welcome to the Arxiv Paper Assistant! Please select a language:</p>" >> dist/index.html
+        echo "    <ul>" >> dist/index.html
+        echo "        <li><a href=\"./en\">English Version</a></li>" >> dist/index.html
+        echo "        <li><a href=\"./zh\">中文版本</a></li>" >> dist/index.html
+        echo "    </ul>" >> dist/index.html
+        echo "</body>" >> dist/index.html
+        echo "</html>" >> dist/index.html
+
+    # Verify the contents of the dist directory before upload
+    - name: Verify dist directory contents
+      run: ls -R dist
+
+    # Upload static pages as GitHub Pages artifact
+    - name: Upload Pages artifact
+      uses: actions/upload-artifact@v2
       if: steps.check_files.outputs.files_exists == 'true'
       with:
         path: dist
-    - uses: actions/deploy-pages@v4
+
+    # Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
       if: steps.check_files.outputs.files_exists == 'true'
       id: deployment
+
