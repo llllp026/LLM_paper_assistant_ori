@@ -13,7 +13,7 @@ As a cost estimate, running this on all of `cs.CL` cost $0.07 on 2/7/2024(on GPT
 - **2/7/2024**: fixed a critical issue from ArXiv changing their RSS format. Added and enabled a title filtering to reduce costs.
 - **1/6/2025**: fixed arxiv api. Changing api from gpt4 to deepseek v3.
 - **2/2/2025**: fixed artifact@v3 bug. Changing v3 to v4.
-
+- **2/10/2025**: Replaced actions/upload-artifact@v3 with actions/upload-pages-artifact@v3 due to the deprecation of upload-artifact@v3. Changing the api from official deepseek to siliconflow deepseek.
   
 ## Quickstart
 This is the minimal necessary steps to get the scanner to run. It is highly recommended to read the whole thing to decide what you want to run.
