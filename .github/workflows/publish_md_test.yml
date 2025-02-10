@@ -88,9 +88,9 @@ jobs:
     - name: Verify dist directory contents
       run: ls -R dist
 
-    # Upload static pages as GitHub Pages artifact (using v3)
+    # Upload static pages as GitHub Pages artifact (using the correct upload artifact action)
     - name: Upload Pages artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-pages-artifact@v3
       if: steps.check_files.outputs.files_exists == 'true'
       with:
         path: dist
@@ -100,5 +100,6 @@ jobs:
       uses: actions/deploy-pages@v4
       if: steps.check_files.outputs.files_exists == 'true'
       id: deployment
+
 
 
