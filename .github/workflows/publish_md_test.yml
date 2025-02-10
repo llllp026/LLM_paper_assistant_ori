@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write
 
 jobs:
   build:
@@ -65,6 +66,10 @@ jobs:
           out-path: dist/zh
           out-path-not-empty: true
 
+      # Debug: Verify the contents of the dist directory
+      - name: Verify dist directory contents
+        run: ls -R dist
+
       # 生成导航首页 index.html
       - name: Generate navigation index
         run: |
@@ -99,7 +104,6 @@ jobs:
         uses: actions/deploy-pages@v1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
-          # 不需要额外参数，actions/deploy-pages 会自动使用上传的 artifact
           token: ${{ secrets.GITHUB_TOKEN }}
+          artifact_name: pages-artifact   # Ensure this matches the name used when uploading the artifact
         id: deployment
-
