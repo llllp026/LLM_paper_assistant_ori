@@ -56,7 +56,7 @@ jobs:
           out-path-not-empty: true
 
       # 转换中文版本的 output_translated.md 为网页
-      - name: Convert Chinese version to pages
+        - name: Convert Chinese version to pages
         uses: wranders/markdown-to-pages-action@v0.1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
@@ -92,7 +92,7 @@ jobs:
 
       # 上传静态网页文件作为 GitHub Pages 的 artifact
       - name: Upload Pages artifact
-        uses: actions/upload-artifact@v2  # Updated version
+        uses: actions/upload-pages-artifact@v2  # Corrected to v2
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           path: dist
