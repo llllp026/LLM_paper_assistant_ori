@@ -1,101 +1,94 @@
-name: Publish output MD to GitHub Pages
+name: Deploy static content to Pages
 
 on:
-  workflow_dispatch:
-  workflow_run:
-    workflows: ["Run daily arxiv"]
-    types:
-      - completed
+  # Runs on pushes targeting the default branch
+  push:
+    branches:
+      - "main"  # Notice the list format here, using '-' for each branch
 
-permissions: write-all
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read   # Grants read access to repository contents
+  pages: write     # Grants write access to GitHub Pages
+  id-token: write  # Grants write access to id-token for authentication
+
+concurrency:
+  group: "pages"  # Ensures that only one deployment is running at a time
+  cancel-in-progress: false  # Ensures the current job will not be canceled if a new one is triggered
 
 jobs:
-  build:
+  deploy:
+    # Define the environment for deployment (GitHub Pages)
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+
+    # The job runs on the latest Ubuntu environment
     runs-on: ubuntu-latest
-    outputs:
-      file-exists: ${{ steps.check_files.outputs.files_exists }}
+
     steps:
-    - uses: actions/checkout@v4
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Checks out the repository so that the workflow can access its contents
 
-    - name: Download artifact
-      id: download-artifact
-      uses: dawidd6/action-download-artifact@v2
-      with:
-        workflow: cron_runs.yaml
-        workflow_conclusion: success
-        name: arxiv-scanner-outputs
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # Replace with your desired Python version
 
-    - name: Display structure of downloaded files
-      run: ls -R
+      # Step 3: Install dependencies from requirements.txt (if Python project)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip  # Upgrades pip to the latest version
+          pip install -r requirements.txt     # Installs the dependencies listed in the requirements.txt file
 
-    - name: Check for output.md and output_translated.md
-      id: check_files
-      uses: andstor/file-existence-action@v2
-      with:
-        files: output.md,output_translated.md
+      # Step 4: Set environment variables (use secrets for sensitive data)
+      - name: Set environment variables
+        run: echo "OAI_KEY=${{ secrets.OAI_KEY }}" >> $GITHUB_ENV  # Adds secret OAI_KEY to the GitHub environment
 
-    # Ensure the output directories exist for both English and Chinese versions
-    - name: Ensure dist directories exist
-      run: |
-        mkdir -p dist/en
-        mkdir -p dist/zh
-    # Convert the English version of output.md to pages
-    - name: Convert English version to pages
-      uses: wranders/markdown-to-pages-action@v0.1
-      if: steps.check_files.outputs.files_exists == 'true'
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        file: output.md
-        out-path: dist/en
-        out-path-not-empty: true
+      # Step 5: Run the arxiv_scraper.py script
+      - name: Run arxiv_scraper.py to fetch papers
+        run: |
+          python arxiv_scraper.py  # This script will scrape the papers from arXiv
 
-    # Convert the Chinese version of output_translated.md to pages
-    - name: Convert Chinese version to pages
-      uses: wranders/markdown-to-pages-action@v0.1
-      if: steps.check_files.outputs.files_exists == 'true'
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        file: output_translated.md
-        out-path: dist/zh
-        out-path-not-empty: true
+      # Step 6: Run filter_papers.py to filter the papers
+      - name: Run filter_papers.py to filter scraped papers
+        run: |
+          python filter_papers.py  # Filters the papers based on your criteria
 
-    # Generate the navigation index page
-    - name: Generate navigation index
-      run: |
-        echo "<!DOCTYPE html>" > dist/index.html
-        echo "<html lang=\"en\">" >> dist/index.html
-        echo "<head>" >> dist/index.html
-        echo "    <meta charset=\"UTF-8\">" >> dist/index.html
-        echo "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">" >> dist/index.html
-        echo "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" >> dist/index.html
-        echo "    <title>GPT Paper Assistant</title>" >> dist/index.html
-        echo "</head>" >> dist/index.html
-        echo "<body>" >> dist/index.html
-        echo "    <h1>GPT Paper Assistant</h1>" >> dist/index.html
-        echo "    <p>Welcome to the Arxiv Paper Assistant! Please select a language:</p>" >> dist/index.html
-        echo "    <ul>" >> dist/index.html
-        echo "        <li><a href=\"./en\">English Version</a></li>" >> dist/index.html
-        echo "        <li><a href=\"./zh\">中文版本</a></li>" >> dist/index.html
-        echo "    </ul>" >> dist/index.html
-        echo "</body>" >> dist/index.html
-        echo "</html>" >> dist/index.html
-    # Verify the contents of the dist directory before upload
-    - name: Verify dist directory contents
-      run: ls -R dist
+      # Step 7: Run main.py to generate the output
+      - name: Run main.py to process filtered papers and generate output
+        run: |
+          python main.py  # Main program that processes the filtered papers and generates the output
 
-    # Upload static pages as GitHub Pages artifact (using the correct upload artifact action)
-    - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v3
-      if: steps.check_files.outputs.files_exists == 'true'
-      with:
-        path: dist
+      # Step 8: Run parse_json_to_md.py to convert the JSON output into Markdown
+      - name: Run parse_json_to_md.py to convert JSON to markdown
+        run: |
+          python parse_json_to_md.py  # Converts JSON output into markdown files
 
-    # Deploy to GitHub Pages
-    - name: Deploy to GitHub Pages
-      uses: actions/deploy-pages@v4
-      if: steps.check_files.outputs.files_exists == 'true'
-      id: deployment
+      # Step 9: Run push_to_slack.py to send notifications to Slack (optional, if necessary)
+      - name: Run push_to_slack.py to send notifications
+        run: |
+          python push_to_slack.py  # Optionally send a Slack notification after deployment
 
+      # Step 10: List the files generated in the 'out' folder
+      - name: List output files
+        run: ls -alh ./out  # Verifies that the expected output files are generated in the 'out' folder
+
+      # Step 11: Upload the generated output as an artifact to GitHub Pages
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'  # Specifies the directory containing the output files to be uploaded
+
+      # Step 12: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4  # This action deploys the artifact to GitHub Pages
+
+      # Step 13: Verify Pages deployment and output the deployment URL
+      - name: Verify Pages deployment
+        run: |
+          echo "Deployment URL: https://<your-username>.github.io/<repository-name>/"  # Prints the deployment URL
