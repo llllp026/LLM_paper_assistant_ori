@@ -1,4 +1,3 @@
 # Stanford NLP faculty.
-Song Han, 143840275
-Guangxuan Xiao, 2046958974
-Jieping Ye, 144030870
+Wassim Tenachi, 2171640527
+Xiaofei He, 3945955
