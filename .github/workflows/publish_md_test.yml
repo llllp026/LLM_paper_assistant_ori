@@ -24,7 +24,7 @@ jobs:
       id: download-artifact
       uses: dawidd6/action-download-artifact@v2
       with:
-        workflow: cron_runs.yaml
+        workflow: jekyll-gh-pages.yml
         workflow_conclusion: success
         name: arxiv-scanner-outputs
 
