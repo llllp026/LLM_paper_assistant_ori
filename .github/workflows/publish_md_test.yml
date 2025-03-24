@@ -43,6 +43,9 @@ jobs:
         mkdir -p dist/en
         mkdir -p dist/zh
 
+    - name: Debug translated content
+      run: cat output_translated.md
+
     # Convert the English version of output.md to pages
     - name: Convert English version to pages
       uses: wranders/markdown-to-pages-action@v0.1
