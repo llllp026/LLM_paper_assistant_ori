@@ -28,7 +28,7 @@ class Paper:
     abstract: str
     arxiv_id: str
 
-    # 添加哈希函数以支持去重
+    # 重写哈希函数，以支持去重
     def __hash__(self):
         return hash(self.arxiv_id)
 
@@ -87,12 +87,11 @@ def get_papers_from_arxiv_api(area: str, timestamp: Optional[datetime], last_id:
 def get_papers_from_arxiv_rss(area: str, config: Optional[dict]) -> Tuple[List[Paper], Optional[datetime], Optional[str]]:
     """
     通过 arxiv RSS 获取指定分类的论文。
-    仅包含分类为 'cs.AI' 或 'cs.LG' 的论文。
     """
     updated = datetime.utcnow() - timedelta(days=1)
     updated_string = updated.strftime("%a, %d %b %Y %H:%M:%S GMT")
     feed = feedparser.parse(
-        f"https://export.arxiv.org/rss/{area}",  # 使用 HTTPS
+        f"https://export.arxiv.org/rss/{area}", # 给定RSS接口
         modified=updated_string
     )
     logging.info(f"Feed Status: {feed.status}")
@@ -257,7 +256,3 @@ if __name__ == "__main__":
             print(f"{idx}. {paper.title}")
     else:
         print("No papers fetched.")
-
-
-
-
