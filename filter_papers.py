@@ -16,7 +16,8 @@ from arxiv_scraper import EnhancedJSONEncoder
 
 
 def filter_by_author(all_authors, papers, author_targets, config):
-    # filter and parse the papers
+    '''遍历每篇论文中的作者，只要有一位的学术id符合config中的，即手动将其加入列表，并将config中设置的得分赋值给他
+    '''
     selected_papers = {}  # pass to output
     all_papers = {}  # dict for later filtering
     sort_dict = {}  # dict storing key and score
@@ -55,6 +56,7 @@ def filter_papers_by_hindex(all_authors, papers, config):
 
 
 def calc_price(model, usage):
+    # 由prompt和completion tokens数目计算
     if model == "gpt-4-1106-preview":
         return (0.01 * usage.prompt_tokens + 0.03 * usage.completion_tokens) / 1000.0
     if model == "gpt-4":
