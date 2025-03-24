@@ -22,7 +22,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 @dataclass
 class Paper:
-    # 记录作者列表、论文标题、摘要、arxiv id
+    # 每篇paper所记录内容包括：作者列表、论文标题、摘要、arxiv id
     authors: List[str]
     title: str
     abstract: str
@@ -49,16 +49,17 @@ def is_earlier(ts1: str, ts2: str) -> bool:
 def get_papers_from_arxiv_api(area: str, timestamp: Optional[datetime], last_id: Optional[str]) -> List[Paper]:
     """
     通过 arxiv API 获取指定分类的论文。
-    仅包含分类为 'cs.AI' 或 'cs.LG' 的论文。
+    如RSS没找到当天合适的论文，会调用API来获取近7天（可自己设置时间范围）的论文。
+    时间范围爬取后，按照config中的目标分类爬取并记录论文。
     """
     end_date = timestamp if timestamp else datetime.utcnow()
-    start_date = end_date - timedelta(days=7)  # 可根据需要调整时间范围
+    start_date = end_date - timedelta(days=7)
 
     # 构造查询语句，确保只包含指定分类
     query = f"cat:{area} AND submittedDate:[{start_date.strftime('%Y%m%d')} TO {end_date.strftime('%Y%m%d')}]"
     search = arxiv.Search(
         query=query,
-        max_results=200,
+        max_results=200, # 每次爬取的最大数量
         sort_by=arxiv.SortCriterion.SubmittedDate,
     )
     results = search.results()
