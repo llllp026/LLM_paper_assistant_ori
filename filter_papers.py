@@ -40,7 +40,7 @@ def filter_by_author(all_authors, papers, author_targets, config):
 
 
 def filter_papers_by_hindex(all_authors, papers, config):
-    # filters papers by checking to see if there's at least one author with > hcutoff hindex
+    # 根据semantic scholor上的h-idex标准来筛选出h-index>cutoff值的作者
     paper_list = []
     for paper in papers:
         max_h = 0
