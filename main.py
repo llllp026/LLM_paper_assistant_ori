@@ -269,6 +269,9 @@ if __name__ == "__main__":
         print(f"Translating paper: {paper['title']}")
         paper['title_cn'] = translate_to_chinese_via_deepseek(paper['title'], openai_client)
         paper['abstract_cn'] = translate_to_chinese_via_deepseek(paper['abstract'], openai_client)
+        # 调试输出，检查翻译结果是否符合预期
+        print(f"中文标题: {paper['title_cn']}")
+        print(f"中文摘要: {paper['abstract_cn']}")
     
 
     # sort the papers by relevance and novelty
@@ -293,6 +296,7 @@ if __name__ == "__main__":
                 for paper_id, paper in selected_papers.items():
                     f.write(f"## {paper['title_cn']}\n\n")
                     f.write(f"{paper['abstract_cn']}\n\n")
+                    
 
         # only push to slack for non-empty dicts
         if config["OUTPUT"].getboolean("push_to_slack"):
