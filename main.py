@@ -200,7 +200,8 @@ def translate_to_chinese_via_deepseek(text: str, client: OpenAI) -> str:
             seed=0
         )
         # 获取返回的翻译文本
-        translated_text = response.choices[0].message['content'].strip()
+        # translated_text = response.choices[0].message['content'].strip()
+        translated_text = response.choices[0].message.content.strip()
         print(f"翻译结果: {translated_text}")  # 输出翻译结果便于调试
         return translated_text
     except Exception as e:
