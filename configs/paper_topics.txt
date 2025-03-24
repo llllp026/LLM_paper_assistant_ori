@@ -4,8 +4,8 @@ Not relevant: General time series forecasting tasks such as financial market pre
 2、Integrating Time Series Forecasting with Symbolic Regression
 Relevant: Papers that combine symbolic regression with time series forecasting to extract interpretable prediction formulas or rules, enhancing explainability in RUL estimation. This includes methods using reinforcement learning, evolutionary algorithms, or algebraic modeling to optimize symbolic expressions for capturing degradation trends.
 Not relevant: Papers that focus solely on symbolic regression without involving time series forecasting, or purely black-box deep learning approaches without interpretability.
-3、Reinforcement Learning for RUL Estimation
+'''3、Reinforcement Learning for RUL Estimation
 Relevant: Studies leveraging reinforcement learning (RL) to optimize RUL prediction models, such as dynamically adjusting forecasting strategies, optimizing symbolic regression search space, or using RLHF (Reinforcement Learning from Human Feedback) to enhance interpretability.
-Not relevant: General RL research unless it is explicitly applied to time series forecasting and RUL estimation.
+Not relevant: General RL research unless it is explicitly applied to time series forecasting and RUL estimation.'''
 
  In suggesting papers to your friend, remember that he does not want to read papers that are about primarily applications of methods to specific domains.
