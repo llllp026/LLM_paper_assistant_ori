@@ -190,15 +190,18 @@ def translate_to_chinese_via_deepseek(text: str, client: OpenAI) -> str:
         response = client.chat.completions.create(
             model="deepseek-ai/DeepSeek-V2.5",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that translates English text to Chinese."},
-                {"role": "user", "content": f"Translate the following text to Chinese:\n\n{text}"},
+                # {"role": "system", "content": "You are a helpful assistant that translates English text to Chinese."},
+                {"role": "system", "content": "你是一个翻译专家，请准确地将下面的英文文本翻译成中文。"},
+                # {"role": "user", "content": f"Translate the following text to Chinese:\n\n{text}"},
+                {"role": "user", "content": f"请将下面的文本翻译成中文:\n\n{text}"},
             ],
             stream=False,
-            temperature=1.0,
+            temperature=0,
             seed=0
         )
         # 获取返回的翻译文本
         translated_text = response.choices[0].message['content'].strip()
+        print(f"翻译结果: {translated_text}")  # 输出翻译结果便于调试
         return translated_text
     except Exception as e:
         print(f"翻译失败: {e}")
