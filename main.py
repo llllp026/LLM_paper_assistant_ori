@@ -294,7 +294,7 @@ if __name__ == "__main__":
         if config["OUTPUT"].getboolean("dump_md"):
             with open(config["OUTPUT"]["output_path"] + "output.md", "w") as f:
                 f.write(render_md_string(selected_papers))
-            # 生成包含中文翻译的 Markdown 文件
+            # 生成包含中文翻译的 Markdown 文件，应该不会错呀
             with open(config["OUTPUT"]["output_path"] + "output_translated.md", "w") as f:
                 for paper_id, paper in selected_papers.items():
                     f.write(f"## {paper['title_cn']}\n\n")
